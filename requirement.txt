@@ -1,0 +1,6 @@
+fastapi 
+uvicorn
+pyngrok
+nest-asyncio
+pymupdf
+google-generativeai
