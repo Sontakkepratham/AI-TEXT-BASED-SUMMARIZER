@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Text Summarizer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      color: #1a202c;
+    }
+
+    header p {
+      color: #718096;
+      margin-top: 6px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      width: 100%;
+      max-width: 750px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #4a5568;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      border-color: #4f46e5;
+      background: #4f46e5;
+      color: white;
+    }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    textarea {
+      width: 100%;
+      height: 180px;
+      padding: 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      resize: vertical;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    textarea:focus { border-color: #4f46e5; }
+
+    .file-drop {
+      border: 2px dashed #cbd5e0;
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #718096;
+    }
+
+    .file-drop:hover { border-color: #4f46e5; background: #f7f8ff; }
+    .file-drop.selected { border-color: #4f46e5; background: #f7f8ff; color: #4f46e5; }
+
+    .file-drop input { display: none; }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    select {
+      padding: 10px 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    button.summarize-btn {
+      flex: 1;
+      padding: 12px;
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button.summarize-btn:hover { background: #4338ca; }
+    button.summarize-btn:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+    .result {
+      margin-top: 24px;
+      display: none;
+    }
+
+    .result h3 {
+      font-size: 1rem;
+      color: #4a5568;
+      margin-bottom: 10px;
+    }
+
+    .result-box {
+      background: #f7f8ff;
+      border: 2px solid #e0e7ff;
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 0.95rem;
+      line-height: 1.7;
+      color: #1a202c;
+    }
+
+    .copy-btn {
+      margin-top: 10px;
+      padding: 8px 16px;
+      background: white;
+      border: 2px solid #4f46e5;
+      color: #4f46e5;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover { background: #4f46e5; color: white; }
+
+    .error {
+      margin-top: 16px;
+      padding: 12px;
+      background: #fff5f5;
+      border: 2px solid #fed7d7;
+      border-radius: 8px;
+      color: #c53030;
+      display: none;
+      font-size: 0.9rem;
+    }
+
+    .loader {
+      display: none;
+      text-align: center;
+      margin-top: 20px;
+      color: #4f46e5;
+      font-weight: 600;
+    }
+
+    .loader span {
+      display: inline-block;
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🧠 AI Text Summarizer</h1>
+  <p>Paste text or upload a PDF — get a clean summary instantly</p>
+</header>
+
+<div class="container">
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('text')">📝 Paste Text</button>
+    <button class="tab" onclick="switchTab('pdf')">📄 Upload PDF</button>
+  </div>
+
+  <!-- Text Section -->
+  <div class="section active" id="text-section">
+    <textarea id="input-text" placeholder="Paste your text here (minimum 30 words)..."></textarea>
+    <div class="controls">
+      <select id="text-length">
+        <option value="short">Short</option>
+        <option value="medium" selected>Medium</option>
+        <option value="long">Long</option>
+      </select>
+      <button class="summarize-btn" onclick="summarizeText()">Summarize</button>
+    </div>
+  </div>
+
+  <!-- PDF Section -->
+  <div class="section" id="pdf-section">
+    <div class="file-drop" id="file-drop" onclick="document.getElementById('pdf-input').click()">
+      <input type="file" id="pdf-input" accept=".pdf" onchange="handleFileSelect(this)"/>
+      <p id="file-label">📂 Click to upload a PDF file</p>
+    </div>
+    <div class="controls">
+      <select id="pdf-length">
+        <option value="short">Short</option>
+        <option value="medium" selected>Medium</option>
+        <option value="long">Long</option>
+      </select>
+      <button class="summarize-btn" onclick="summarizePDF()">Summarize</button>
+    </div>
+  </div>
+
+  <!-- Loader -->
+  <div class="loader" id="loader">
+    <span>⏳ Generating summary, please wait...</span>
+  </div>
+
+  <!-- Error -->
+  <div class="error" id="error-box"></div>
+
+  <!-- Result -->
+  <div class="result" id="result">
+    <h3>📋 Summary</h3>
+    <div class="result-box" id="summary-output"></div>
+    <button class="copy-btn" onclick="copySummary()">Copy Summary</button>
+  </div>
+
+</div>
+
+<script>
+  // ── IMPORTANT: Paste your ngrok URL here ──
+  const API_URL = "https://nontidal-kim-unvendible.ngrok-free.dev";
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(tab + '-section').classList.add('active');
+    event.target.classList.add('active');
+    hideResults();
+  }
+
+  function handleFileSelect(input) {
+    const file = input.files[0];
+    if (file) {
+      document.getElementById('file-label').textContent = `✅ ${file.name}`;
+      document.getElementById('file-drop').classList.add('selected');
+    }
+  }
+
+  function showLoader() {
+    document.getElementById('loader').style.display = 'block';
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('error-box').style.display = 'none';
+  }
+
+  function hideLoader() {
+    document.getElementById('loader').style.display = 'none';
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('error-box');
+    box.textContent = msg;
+    box.style.display = 'block';
+  }
+
+  function hideResults() {
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('error-box').style.display = 'none';
+    document.getElementById('loader').style.display = 'none';
+  }
+
+  function showSummary(text) {
+    document.getElementById('summary-output').textContent = text;
+    document.getElementById('result').style.display = 'block';
+  }
+
+  async function summarizeText() {
+    const text = document.getElementById('input-text').value.trim();
+    const length = document.getElementById('text-length').value;
+
+    if (!text) { showError("Please paste some text first."); return; }
+
+    showLoader();
+
+    try {
+      const res = await fetch(`${API_URL}/summarize/text`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, length })
+      });
+      const data = await res.json();
+      hideLoader();
+      if (data.error) { showError(data.error); return; }
+      showSummary(data.summary);
+    } catch (err) {
+      hideLoader();
+      showError("Could not connect to server. Make sure Colab is still running.");
+    }
+  }
+
+  async function summarizePDF() {
+    const fileInput = document.getElementById('pdf-input');
+    const length = document.getElementById('pdf-length').value;
+
+    if (!fileInput.files[0]) { showError("Please select a PDF file first."); return; }
+
+    showLoader();
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+    formData.append("length", length);
+
+    try {
+      const res = await fetch(`${API_URL}/summarize/pdf`, {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      hideLoader();
+      if (data.error) { showError(data.error); return; }
+      showSummary(data.summary);
+    } catch (err) {
+      hideLoader();
+      showError("Could not connect to server. Make sure Colab is still running.");
+    }
+  }
+
+  function copySummary() {
+    const text = document.getElementById('summary-output').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = "✅ Copied!";
+      setTimeout(() => btn.textContent = "Copy Summary", 2000);
+    });
+  }
+</script>
+
+</body>
+</html>
